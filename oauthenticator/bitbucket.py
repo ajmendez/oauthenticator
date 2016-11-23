@@ -39,10 +39,7 @@ class BitbucketOAuthenticator(OAuthenticator):
         help="Automatically whitelist members of selected teams",
     )
 
-    headers = {"Accept": "application/json",
-               "User-Agent": "JupyterHub",
-               "Authorization": "Bearer {}"
-               }
+    
 
     @gen.coroutine
     def authenticate(self, handler, data=None):
@@ -79,12 +76,14 @@ class BitbucketOAuthenticator(OAuthenticator):
 
         access_token = resp_json['access_token']
 
-        self.headers["Authorization"] = self.headers["Authorization"].format(access_token)
-
         # Determine who the logged in user is
+        headers = {"Accept": "application/json",
+               "User-Agent": "JupyterHub",
+               "Authorization": "Bearer {}".format(access_token)
+               }
         req = HTTPRequest("https://api.bitbucket.org/2.0/user",
                           method="GET",
-                          headers=self.headers
+                          headers=headers
                           )
         resp = yield http_client.fetch(req)
         resp_json = json.loads(resp.body.decode('utf8', 'replace'))
@@ -92,7 +91,6 @@ class BitbucketOAuthenticator(OAuthenticator):
         return resp_json["username"]
 
     def check_whitelist(self, username, headers=None):
-        headers = headers if headers else self.headers
         if self.team_whitelist:
             return self._check_group_whitelist(username, headers)
         else:
@@ -108,7 +106,7 @@ class BitbucketOAuthenticator(OAuthenticator):
 
         # We verify the team membership by calling teams endpoint.
         # Re-use the headers, change the request.
-        headers = headers if headers else self.headers
+#         headers = headers if headers else self.headers
         next_page = url_concat("https://api.bitbucket.org/2.0/teams",
                                {'role': 'member'})
         user_teams = set()
